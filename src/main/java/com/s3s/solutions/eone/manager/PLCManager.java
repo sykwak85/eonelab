@@ -13,6 +13,7 @@ import com.s3s.solutions.eone.EoneConst;
 import com.s3s.solutions.eone.define.EOrderType;
 import com.s3s.solutions.eone.define.ERack;
 import com.s3s.solutions.eone.dmw.command.PLCCommand;
+import com.s3s.solutions.eone.dmw.command.message.body.AlarmRequestBody;
 import com.s3s.solutions.eone.dmw.command.message.body.OrderReportBody;
 import com.s3s.solutions.eone.dmw.command.message.body.OrderRequestBody;
 import com.s3s.solutions.eone.service.wmd.order.OrderVO;
@@ -36,13 +37,21 @@ public class PLCManager {
 	private final int OUTPUT_REQUEST = 1;
 	private final int READY_STATUS = 0;
 	private final int COMPLETE_STATUS = 1;
+	private final int ALARM_STATUS = 1;
 
 	private final String CMD_ORDER = "order";
+	private final String CMD_ALARM = "alarm";
 
 	private final String CMD_WAIT_ORDER = "waitOrder";
 
 	private final int WAIT_ORDER_ADDR = 217;
+	//dmw_convert_property테이블의 system_device_type값을 alarm property_type = alarmStatus 기준정보 설정 필요
+	private final int ALM_ADDR = 112;
+	private final int ALM_ADDR1 = 674;
+	private final int ALM_ADDR2= 1074;
 
+	private final String  ALARM = "alarmStatus1";
+	
 	private final String ORDER_PROC_BUFFER_RACK = "orderProcBufferRack";
 	private final String ORDER_PROC_BUFFERX = "orderProcBufferX";
 	private final String ORDER_PROC_BUFFERY = "orderProcBufferY";
@@ -113,22 +122,52 @@ public class PLCManager {
 		});
 
 	}
-	
 	/*
-	 * TrayId 중복 체크 후 결과를 알람 Status WRITE 영역에 처리 
+	 * TrayId 중복 체크 후 결과를 알람 Status WRITE 영역에 처리
+	 * 라인을 기준으로 해당영역에 맞는 PLC Address를 찾아 Alarm Status를 쓰게 함. 
 	 */
-	public void sendAlarmState(String alarmState) throws Exception {
-		dmwManager.getHadler(EoneConst.PLC_ID, ModbusTCPHandler.class).ifPresent(o -> {
-			try {
-				o.send(CMD_WAIT_ORDER, WAIT_ORDER_ADDR, 0);
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		});
+	public void sendAlarmState(String lineNo) throws Exception {
+		//int value = Integer.parseInt(alarmState);
+		
+		AlarmRequestBody alarmRequest = new AlarmRequestBody(); 
+	    dmwManager.getHadler(EoneConst.PLC_ID, ModbusTCPHandler.class).ifPresent(o -> {
+	        try {
+//	        	PLC 인터페이스시 시간설정
+//	        	orderManagerHistoryService.add(new OrderManagerHistoryDTO() {{
+//					setReq(dbOrder.getLineNo()+" line "+ sendOrder.toString());
+//				}});
+//				o.send(CMD_ALARM, alarmRequest);
+	        	
+	        	switch(lineNo) {
+		        	case "L1": o.send(CMD_ALARM, ALM_ADDR, 1); break;
+		        	case "L2": o.send(CMD_ALARM, ALM_ADDR, 1); break;
+		        	case "L3": o.send(CMD_ALARM, ALM_ADDR, 1); break;
+	        	}
+	        	log.info("Sending ALARM signal to address {}, value=1", ALM_ADDR);
+	        	//라인기준으로 분기처리하는 로직 추가.
+	        	//PLC Address 기준정보 데이터 추가 필요.
+	        	//PLC주소명 W112, 실제 번지수(10진수) 112, 실제 번지수(16진수)  0x0070
+	        	//PLC주소명 W2A2, 실제 번지수(10진수) 674, 실제 번지수(16진수)  0x02A2
+	        	//PLC주소명 W432, 실제 번지수(10진수) 1074, 실제 번지수(16진수) 0x0432
+	            // W112 주소에 값 전송(1라인)
+	            //o.send(ALARM, ALM_ADDR, 1);
+	            //alarmRequest.setAlarmStatus1(1);
+
+	            // W2A2 주소에 값 전송(2라인)
+	            //o.send(ALARM, ALM_ADDR1, 1);
+	            //alarmRequest.setAlarmStatus2(1);
+
+	            // W432 주소에 값 전송(3라인)
+	            //o.send(ALARM, ALM_ADDR2, 1);
+	            //alarmRequest.setAlarmStatus3(1);
+	            
+	        } catch (Exception e) {
+	            log.error("Error sending alarm state to PLC", e);
+	            e.printStackTrace();
+	        }
+	    });
 	}
 	
-
 	//FIXME 렉번호 좌우로 변경해야함
 	private void makeWorkData(List<OrderWorkVO> workList, OrderRequestBody sendOrder) {
 		for(OrderWorkVO work : workList) {

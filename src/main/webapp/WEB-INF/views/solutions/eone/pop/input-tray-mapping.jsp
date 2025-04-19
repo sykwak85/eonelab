@@ -29,7 +29,16 @@ $(function(){
 					}});
 				}
 			});
-
+			
+			//알람 테스트를 위한 PLC 강제 Alarm 전송
+			$(".btn-alarm").on("touchend click", function(e){
+				console.log("----------------Alarm Start--------------");
+				SfpAjax.ajaxRequestBody("<c:url value='/solutions/eone/pc/alarm'/>"), {lineNo : lineNo} function(data) {
+				});
+				console.log("----------------Alarm End--------------");
+			}
+			
+			
 			$(".btn-save").on("touchend click", function(e){
 				e.preventDefault();
 
@@ -74,15 +83,18 @@ $(function(){
 				var bufferId = $this.data("bufferId");
 				var trayId   = $this.find("input[name='trayId']").val();
 				
-				console.log("Duplicate :"lineNo);
-				console.log("Duplicate :"bufferId);
-				console.log("Duplicate :"trayId);
+				//console.log("Duplicate :"+lineNo);
+				//console.log("Duplicate :"+bufferId);
+				console.log("Duplicate :"+trayId);
 				//Tray 중복 체크
 				SfpAjax.ajaxRequestBody("<c:url value='/solutions/eone/wmd/ordertray/dulipCheck'/>", {trayId : trayId}, function(data) {
-					if(data !== 0){
+					if(data !== 0) {
 						MessageBox.alarm("Tray["+trayId+"]가 이미 입고되어 있습니다. \n중복 Tray를 확인하세요", { isAutoHide : true });
-						return;
 						//PLC 경광등 인터페이스 로직 추가.
+						SfpAjax.ajaxRequestBody("<c:url value='/solutions/eone/pc/alarm'/>"), {lineNo : lineNo}, function(data) {
+						});
+				
+						return;
 					}
 				});
 
@@ -255,6 +267,7 @@ $(function(){
 			<div class="align-center">
 				<button class="btn-close"><s:interpret word='닫기' abbr='' /></button>
 				<button class="btn-save"><s:interpret word='보관시작' abbr='' /></button>
+				<button class="btn-alarm"><s:interpret word='알람-테스트' abbr='' /></button>
 			</div>
 		</footer>
 	</div>

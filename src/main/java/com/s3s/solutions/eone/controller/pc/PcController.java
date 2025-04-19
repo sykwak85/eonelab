@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.s3s.sfp.SfpConst;
@@ -63,6 +64,11 @@ public class PcController {
 	@RequestMapping(value = { "/input" }, method = { RequestMethod.POST, RequestMethod.GET })
 	public void input() throws Exception {
 		orderManager.taskOrder();
+	}
+	
+	@RequestMapping(value = { "/alarm" }, method = { RequestMethod.POST, RequestMethod.GET })
+	public void alarm(@RequestParam(value="lineNo",defaultValue = "") String lineNo) throws Exception {
+		orderManager.executerAlarm(lineNo);
 	}
 
 }

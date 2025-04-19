@@ -59,4 +59,8 @@ public class OrderManager {
 			orderBizService.orderStart(order);
 		}
 	}
+	
+	public void executerAlarm(String lineNo) throws Exception{
+		plcManager.sendAlarmState(lineNo);
+	}
 }
