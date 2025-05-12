@@ -19,6 +19,7 @@ import com.s3s.solutions.eone.exchange.job.JobService;
 import com.s3s.solutions.eone.exchange.job.JobVO;
 import com.s3s.solutions.eone.exchange.jobtray.JobTrayService;
 import com.s3s.solutions.eone.exchange.jobtray.JobTrayVO;
+import com.s3s.solutions.eone.manager.PLCManager;
 import com.s3s.solutions.eone.exchange.work.WorkReadTrayVO;
 import com.s3s.solutions.eone.exchange.work.WorkService;
 import com.s3s.solutions.eone.exchange.work.WorkVO;
@@ -28,6 +29,7 @@ import com.s3s.solutions.eone.exchange.workjobtray.WorkJobTrayVO;
 import com.s3s.solutions.eone.exchange.workjobtray.dto.WorkJobTrayDTO;
 import com.s3s.solutions.eone.service.wmd.ordergroup.OrderGroupService;
 import com.s3s.solutions.eone.service.wmd.ordergroup.OrderGroupVO;
+import com.s3s.solutions.eone.service.wmd.ordertray.OrderTrayService;
 import com.s3s.solutions.eone.service.wmd.orderwork.OrderWorkVO;
 import com.s3s.solutions.eone.service.wmd.traylocation.TrayLocationService;
 import com.s3s.solutions.eone.service.wmd.traylocation.TrayLocationVO;
@@ -57,6 +59,10 @@ public class InterfaceBizService {
 	private final OrderGroupService orderGroupService;
 	
 	private final WorkPlanTrayService workPlanTrayService;
+
+	private final OrderTrayService orderTrayService;
+	
+	private final PLCManager plcManager;
 	
 	//@Transactional(rollbackFor = { Exception.class })
 	public void procYudoList() throws Exception {
@@ -287,12 +293,32 @@ public class InterfaceBizService {
 			WorkJobTrayVO seqWorkJobTrayVO = new WorkJobTrayVO();
 			String seq = "0";
 			
-			if (StringUtils.equals(orderGroup.getOrderGroupTypeCd(), EOrderGroupType.INPUT.name())) {
+			//입고 업무 진행
+			if (StringUtils.equals(orderGroup.getOrderGroupTypeCd(), EOrderGroupType.INPUT.name())) 
+			{
+				log.info("-------------------------------------PLC 입고 업무 Start-------------------------------------");
 				gb = "IN";
-				if (StringUtils.isBlank(work.getTrayId())) {
+				if (StringUtils.isBlank(work.getTrayId())) 
+				{
+					//보관업무시 TaryId가 없을 경우 또한 알람 발생 처리.
+					log.info("-------------------------------------PLC Alarm Start-------------------------------------");
+					plcManager.sendAlarmState(orderGroup.getLineNo());//알람발생
+					log.info("-------------------------------------PLC Alarm End : DB 확인---------------------------------------");
 					resultYn = "N";
 					remark = "Rack번호 미인식";
+					
 				}
+				//procYudoWrok에서 수신된 targetNo(TrayID) duplication Check 기존 로직 사용
+				int dupCint = orderTrayService.duplicateTrayId(work.getTrayId());
+				if(dupCint != 0) 
+				{
+					log.info("-------------------------------------PLC Alarm Start-------------------------------------");
+					plcManager.sendAlarmState(orderGroup.getLineNo());//알람발생
+					log.info("-------------------------------------PLC Alarm End : DB 확인---------------------------------------");
+					resultYn = "N";
+					remark = "수신된 랙번호["+work.getTrayId()+"]가 이미 입고되어 있습니다.";
+				}
+				log.info("-------------------------------------PLC 입고 업무 End---------------------------------------");
 			} else {
 				if (StringUtils.equals(orderGroup.getOrderGroupTypeCd(), EOrderGroupType.OUTPUT.name())) {
 					gb = "DEL";
